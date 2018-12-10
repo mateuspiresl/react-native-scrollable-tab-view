@@ -17,7 +17,7 @@ function applyBoundaries(value, min, max) {
 module.exports = {
   isPagePress: false,
   nextEvent: null,
-  referencePosition,
+  referencePosition: 0,
   offset: {
     current: 0,
     reference: 0,
@@ -100,7 +100,7 @@ module.exports = {
     }
 
     // Sometimes, the next position it receives is the old one plus/minus 1, but the next one that
-    // comes has a small difference (less than 1, as expected) to the old one
+    // comes has a small difference (less than 1) to the old one, as expected
     // As there is no reason for this to happen, this is considered a bug in the ScrollView and is
     // ignored below
     if (Math.abs(value - this.referencePosition) === 1) {
@@ -142,7 +142,7 @@ module.exports = {
         this.offset.reference = this.offset.current;
       }
 
-      // this.updateTabUnderline(intPosition, pageOffset, tabCount);
+      this.updateTabUnderline(intPosition, pageOffset, tabCount);
     }
 
     this.referencePosition = value;
