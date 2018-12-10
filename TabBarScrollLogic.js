@@ -17,11 +17,7 @@ function applyBoundaries(value, min, max) {
 module.exports = {
   isPagePress: false,
   nextEvent: null,
-  position: {
-    current: 0,
-    reference: 0,
-    next: null,
-  },
+  referencePosition,
   offset: {
     current: 0,
     reference: 0,
@@ -37,7 +33,6 @@ module.exports = {
 
   onPageUpdate(page) {
     this.isPagePress = true;
-    this.position.next = page;
     this.offset.referenceInterpolated = this.offset.reference;
     this.offset.next = this.calculateOffset(Math.floor(page), page % 1);
     this.offset.toNext.currentDirection = this.offset.next - this.offset.current;
@@ -48,7 +43,7 @@ module.exports = {
     this.offset.toNext.reference = Math.abs(this.offset.reference - this.offset.next);
 
     // console.log('PAGE', {
-    //   position: JSON.stringify(this.position),
+    //   position: this.referencePosition,
     //   offset: JSON.stringify(this.offset),
     //   isNextAtMiddle: this.isNextAtMiddle(),
     //   isCurrentAtMiddle: this.isCurrentAtMiddle(),
@@ -108,8 +103,8 @@ module.exports = {
     // comes has a small difference (less than 1, as expected) to the old one
     // As there is no reason for this to happen, this is considered a bug in the ScrollView and is
     // ignored below
-    if (Math.abs(value - this.position.reference) === 1) {
-      // console.log('BUGGY MOVEMENT IGNORED', this.position.reference, value);
+    if (Math.abs(value - this.referencePosition) === 1) {
+      // console.log('BUGGY MOVEMENT IGNORED', this.referencePosition, value);
       return;
     }
 
@@ -127,11 +122,9 @@ module.exports = {
       // console.log('UPDATE', {
       //   IS_PAGE_PRESS: this.isPagePress,
       //   OFFSET: offset,
-      //   old_position: this.position.reference,
+      //   old_position: this.referencePosition,
       //   new_position: value,
-      //   current_position: this.position.current,
-      //   next_position: this.position.next,
-      //   position: this.position,
+      //   position: this.referencePosition,
       //   offset: this.offset,
       //   isNextAtMiddle: nextAtMiddle,
       //   isCurrentAtMiddle: this.isCurrentAtMiddle(offset),
@@ -146,57 +139,19 @@ module.exports = {
       if (!this.isPagePress || (!this.isCurrentAtNext() && (nextAtMiddle || !this.isCurrentAtMiddle(offset)))) {
         this.updateTabPanel(offset, intPosition, pageOffset, this.isPagePress && nextAtMiddle);
       } else {
-        // this.position.reference = this.position.current;
         this.offset.reference = this.offset.current;
       }
 
       // this.updateTabUnderline(intPosition, pageOffset, tabCount);
     }
 
-    this.position.reference = value;
+    this.referencePosition = value;
   },
 
   updateCurrentOffset(offset) {
-    if (offset < 0) {
-      return;
+    if (offset >= 0) {
+      this.offset.current = offset;
     }
-
-    const position = Math.floor(this.position.current);
-    const tab = this._tabsMeasurements[position];
-
-    if (tab) {
-      // The movement is to the left
-      if (offset < this.offset.current) {
-        // If this is still after the current tab left, it's for sure still in the current tab, so
-        // just the page offset may be changed
-        if (tab.left <= offset) {
-          this.position.current = position + (offset - tab.left) / tab.width;
-        // Otherwise it is before the current tab
-        } else {
-          this.position.current = this.findPositionReversed(offset, 0, position - 1);
-        }
-      // The movement is to the right
-      } else if (this.offset.current < offset) {
-        // If this is still before the next tab, it's for sure still in the current tab, so just the
-        // page offset may be changed
-        if (offset < tab.left + tab.width) {
-          this.position.current = position + (offset - tab.left) / tab.width;
-        // Otherwise it is after the current tab
-        } else {
-          this.position.current = this.findPosition(offset, position + 1);
-        }
-      }
-    }
-
-    this.offset.current = offset;
-
-    // console.log('SCROLL', {
-    //   IS_PAGE_PRESS: this.isPagePress,
-    //   offset: this.offset.current,
-    //   position: this.position.current,
-    //   isNextAtMiddle: this.isNextAtMiddle(),
-    //   isCurrentAtMiddle: this.isCurrentAtMiddle(),
-    // });
   },
 
   findPosition(offset, start = 0, end) {
@@ -282,14 +237,13 @@ module.exports = {
     if (nextAtMiddle) {
       const interpolated = this.interpolateOffset(offset);
       const hasBuggyMovement = Math.abs(this.offset.referenceInterpolated - interpolated) >= 100;
-      const alreadyAtOffset = Math.abs(this.position.current - this.position.referenceInterpolated) <= 0.001;
 
       this.updateCurrentOffset((this.offset.current + interpolated) / 2);
 
       this.offset.reference = offset;
       this.offset.referenceInterpolated = interpolated;
       // TODO Needs improment
-      this.offset.ignored = (!this.offset.ignored && !sameDirection && hasBuggyMovement) || alreadyAtOffset;
+      this.offset.ignored = !this.offset.ignored && !sameDirection && hasBuggyMovement;
       
       if (!this.offset.ignored) {
         this._scrollView.getNode().scrollTo({ x: interpolated, y: 0, animated: false });
@@ -303,16 +257,14 @@ module.exports = {
         offset,
         interpolated,
         currentOffset: this.offset.current,
-        currentPosition: this.position.current,
       });
     } else {
       const hasBuggyMovement = Math.abs(this.offset.reference - offset) >= 100;
-      const alreadyAtOffset = Math.abs(this.position.current - this.position.reference) <= 0.001;
 
       this.updateCurrentOffset((this.offset.current + offset) / 2);
 
       this.offset.reference = offset;
-      this.offset.ignored = (!this.offset.ignored && !sameDirection && hasBuggyMovement) || alreadyAtOffset;
+      this.offset.ignored = !this.offset.ignored && !sameDirection && hasBuggyMovement;
 
       if (!this.offset.ignored) {
         this._scrollView.getNode().scrollTo({ x: offset, y: 0, animated: false });
