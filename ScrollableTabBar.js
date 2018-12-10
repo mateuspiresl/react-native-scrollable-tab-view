@@ -15,18 +15,6 @@ const Button = require('./Button');
 const TabBarScrollLogic = require('./TabBarScrollLogic');
 
 const WINDOW_WIDTH = Dimensions.get('window').width;
-const NONE = 0;
-const LEFT = -1;
-const RIGHT = 1;
-
-function shouldStay(a, b, x) {
-  // Should stay in case of not moving
-  return a === b
-    // Or current position at the middle
-    || (a < x && x < b) || (b < x && x < a)
-    // Or final position at the middle
-    || (a < b && b < x) || (x < b && b < a);
-}
 
 const ScrollableTabBar = createReactClass({
   propTypes: {
@@ -133,7 +121,7 @@ const ScrollableTabBar = createReactClass({
         directionalLockEnabled={true}
         bounces={false}
         scrollsToTop={false}
-        onScroll={this.updateCurrentOffset}
+        onScroll={event => this.updateCurrentOffset(event.nativeEvent.contentOffset.x)}
         scrollEventThrottle={5}
       >
         <View
