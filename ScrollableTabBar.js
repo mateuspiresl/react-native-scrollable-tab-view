@@ -147,18 +147,29 @@ const ScrollableTabBar = createReactClass({
     }
   },
 
+  defineRightBound() {
+    if (this._containerMeasurements && this._tabContainerMeasurements) {
+      this._rightBoundScroll = this._tabContainerMeasurements.width - this._containerMeasurements.width;
+    }
+  },
+
   onTabContainerLayout(e) {
     this._tabContainerMeasurements = e.nativeEvent.layout;
+
     let width = this._tabContainerMeasurements.width;
     if (width < WINDOW_WIDTH) {
       width = WINDOW_WIDTH;
     }
+    
+    this.defineRightBound();
     this.setState({ _containerWidth: width, });
     this.updateView({value: this.props.scrollValue.__getValue(), });
   },
 
   onContainerLayout(e) {
     this._containerMeasurements = e.nativeEvent.layout;
+
+    this.defineRightBound();
     this.updateView({value: this.props.scrollValue.__getValue(), });
   },
 });
