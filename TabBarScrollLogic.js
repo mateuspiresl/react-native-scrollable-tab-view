@@ -11,19 +11,29 @@ function applyBoundaries(value, min, max) {
 }
 
 module.exports = {
+  // True when the movement belongs to a tab press
   isPagePress: false,
+  // Event that turns off the page press flag
   pagePressEvent: null,
+  // The reference position of the content (pages) scroller
   referencePosition: 0,
   offset: {
+    // The current offset of the tab bar scroller
+    // This one consider the swip movement of the tab bar and is the most update one
     current: 0,
+    // The reference offset is calculated from the position of the content (pages) scroller
     reference: 0,
+    // The next offset is calculated from the position of the tab selected by a tab press
+    // This one needs to be considered in the interpolation movement discussed in the
+    // #interpolateOffset method
     next: 0,
     toNext: {
+      // Difference between the current offset and next one
       current: 0,
+      // Difference between the reference offset and next one
       reference: 0,
     },
   },
-  ignored: false,
 
   onPageUpdate(page) {
     this.isPagePress = true;
@@ -126,6 +136,14 @@ module.exports = {
     return applyBoundaries(offset, 0, this._rightBoundScroll);
   },
 
+  /**
+   * Interpolate the offset for cases where the next position in between the current and the
+   * reference. It means the reference position is moving towards the next position, but the
+   * current position should move in the opposit direction to reach the next position. This method
+   * calculates the offset in this opposit direction.
+   * @param {Number} offset The real offset calculated from the reference.
+   * @returns {Number} The offset for the opposit direction.
+   */
   interpolateOffset(offset) {
     // Reference portion that is missing to arrive at next
     const referenceRatio = Math.abs((this.offset.next - offset) / this.offset.toNext.reference);
@@ -136,8 +154,21 @@ module.exports = {
     return applyBoundaries(this.offset.next + current, 0, this._rightBoundScroll);
   },
 
+  /**
+   * Updates the scroll offset and the current offset for later reference.
+   * @param {Number} offset The offset to update.
+   */
   move(offset) {
+    // The current offset is not changed to the offset updated to avoid missing an update that
+    // comes before the movement is completely done.
+    // Example: considering the current offset is 100 and the new one is 200, if another update
+    // happens later and its offset is 180, it will be ignored because it is opposit to the
+    // movement. But if the smoothing below happen, the stored offset for the update of 200 will be
+    // 150, which is smaller than 180 and won't make this updated get ignored.
     this.updateCurrentOffset((this.offset.current + offset) / 2);
+    
+    // Note the movement is updated to the actual offset. The smothing above is made just for the
+    // current offset reference.
     this._scrollView.getNode().scrollTo({ x: offset, y: 0, animated: false });
   },
 
